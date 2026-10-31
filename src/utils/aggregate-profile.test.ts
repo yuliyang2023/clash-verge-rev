@@ -7,6 +7,7 @@ import {
   readAggregateSettings,
   type AggregateSettings,
 } from './aggregate-profile'
+import { isProfileYaml, parseProfileYaml } from './profile-yaml'
 
 const sources = [
   {
@@ -112,5 +113,55 @@ describe('aggregate subscription configuration', () => {
       buildAggregateProfile({ ...settings, other: '- not a mapping' }, sources),
     ).toThrow()
     expect(readAggregateSettings('proxies: []')).toBeNull()
+  })
+
+  test('imports a complete SOCKS5 YAML profile and aggregates only its nodes through a file provider', () => {
+    const yaml = `# Local SOCKS5 configuration
+proxies:
+  - name: cmss-win7
+    type: socks5
+    server: 192.168.1.14
+    port: 8385
+    udp: true
+proxy-groups:
+  - name: PROXY
+    type: select
+    proxies: [cmss-win7]
+rule-providers:
+rules:
+  - DOMAIN-SUFFIX,cmss.com,PROXY
+  - MATCH,DIRECT
+dns:
+  enable: true
+  ipv6: true
+  nameserver: [223.5.5.5, "2400:3200::1"]
+`
+    expect(isProfileYaml(yaml)).toBe(true)
+    const imported = parseProfileYaml(yaml)
+    expect(imported['rule-providers']).toBeNull()
+    expect(imported.rules).toContain('DOMAIN-SUFFIX,cmss.com,PROXY')
+    expect(imported.dns).toMatchObject({ enable: true, ipv6: true })
+    const config = load(
+      buildAggregateProfile({ ...settings, sources: ['R1', 'L1'] }, [
+        sources[0],
+        { uid: 'L1', name: '中文配置', file: '中文配置.yaml' },
+      ]),
+    ) as Record<string, any>
+    expect(config['proxy-providers']['subscription-R1'].type).toBe('http')
+    expect(config['proxy-providers']['subscription-L1']).toMatchObject({
+      type: 'file',
+      path: './profiles/中文配置.yaml',
+    })
+    expect(config['proxy-providers']['subscription-L1'].url).toBeUndefined()
+    expect(config.rules).not.toContain('DOMAIN-SUFFIX,cmss.com,PROXY')
+    expect(config.dns).toBeUndefined()
+  })
+
+  test('distinguishes pasted YAML from a URL and rejects invalid imports', () => {
+    expect(isProfileYaml('https://example.com/subscription')).toBe(false)
+    expect(isProfileYaml('\uFEFFproxies: []')).toBe(true)
+    expect(() => parseProfileYaml('proxies: [')).toThrow()
+    expect(() => parseProfileYaml('- not a configuration')).toThrow()
+    expect(() => parseProfileYaml('rules: ["MATCH,DIRECT"]')).toThrow()
   })
 })

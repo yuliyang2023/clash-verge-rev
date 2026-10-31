@@ -4,7 +4,8 @@
       "updateAll": "Update All Profiles",
       "viewRuntimeConfig": "View Runtime Config",
       "reactivate": "Reactivate Profiles",
-      "import": "Import"
+      "import": "Import",
+      "importYaml": "Import YAML"
     },
     "batch": {
       "actions": {
@@ -124,7 +125,9 @@
         "useSystemProxy": "Use System Proxy",
         "useClashProxy": "Use Clash Proxy",
         "acceptInvalidCerts": "Allows Invalid Certificates (Danger)",
-        "allowAutoUpdate": "Allow Auto Update"
+        "allowAutoUpdate": "Allow Auto Update",
+        "yamlContent": "YAML configuration",
+        "yamlContentHint": "Choose a .yml / .yaml file or paste its contents. Rules, proxy groups and DNS are preserved in this profile."
       },
       "types": {
         "remote": "Remote",
@@ -222,9 +225,9 @@
     "action": "Aggregate",
     "title": "Aggregate subscriptions",
     "defaultName": "Aggregated subscriptions",
-    "description": "Save a local profile combining subscription nodes with shared rules. Enable it from the profile list after saving. The core refreshes each subscription independently.",
-    "sources": "Subscriptions",
-    "sourcesHint": "Import Clash-compatible subscriptions first. Their rules and proxy groups are ignored.",
+    "description": "Save a local profile combining subscription and local YAML nodes with shared rules. Enable it from the profile list after saving. Remote subscriptions refresh independently; local nodes are read from their imported profiles.",
+    "sources": "Subscriptions / local profiles",
+    "sourcesHint": "Select remote subscriptions or local YAML profiles containing proxies. Only their nodes are used; rules and proxy groups come from the selected template.",
     "missingSource": "Unavailable subscription: {{uid}}",
     "removeMissing": "Remove unavailable subscriptions before saving.",
     "template": "Rule template",
