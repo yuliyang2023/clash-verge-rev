@@ -1,0 +1,87 @@
+name: Manual Desktop Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+  HUSKY: 0
+
+concurrency:
+  group: '${{ github.workflow }} - ${{ github.ref }}'
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            bundle: dmg
+            extension: dmg
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            bundle: dmg
+            extension: dmg
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bundle: nsis
+            extension: exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: 'manual-${{ matrix.target }}'
+          workspaces: |
+            . -> target
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          run_install: false
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare platform resources
+        run: pnpm run prebuild ${{ matrix.target }}
+
+      - name: Configure build without updater signing
+        run: >-
+          node -e "require('node:fs').writeFileSync('src-tauri/tauri.ci.conf.json', JSON.stringify({ bundle: { createUpdaterArtifacts: false } }))"
+
+      - name: Build installer
+        env:
+          APPLE_SIGNING_IDENTITY: '-'
+        run: pnpm build --target ${{ matrix.target }} --bundles ${{ matrix.bundle }} --config src-tauri/tauri.ci.conf.json
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: clash-verge-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/bundle/${{ matrix.bundle }}/*.${{ matrix.extension }}
+          if-no-files-found: error
+          retention-days: 14
