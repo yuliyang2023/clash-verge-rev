@@ -32,6 +32,7 @@ import {
   BaseStyledTextField,
   type DialogRef,
 } from '@/components/base'
+import { AggregateProfileViewer } from '@/components/profile/aggregate-profile-viewer'
 import { ProfileItem } from '@/components/profile/profile-item'
 import { ProfileMore } from '@/components/profile/profile-more'
 import {
@@ -46,6 +47,7 @@ import {
   enhanceProfiles,
   getRuntimeLogs,
   importProfile,
+  readProfileFile,
   reorderProfile,
   updateProfile,
 } from '@/services/cmds'
@@ -58,6 +60,10 @@ import {
   useProfileUpdates,
   useSetProfileLoading,
 } from '@/store/app-store-context'
+import {
+  readAggregateSettings,
+  type AggregateSettings,
+} from '@/utils/aggregate-profile'
 import { debugLog } from '@/utils/debug'
 import { isValidUrl } from '@/utils/network'
 
@@ -91,6 +97,10 @@ const ProfilePage = () => {
     string | null
   >(null)
   const [loading, setLoading] = useState(false)
+  const [aggregateEditor, setAggregateEditor] = useState<{
+    item?: IProfileItem
+    settings?: AggregateSettings
+  } | null>(null)
 
   const [batchMode, setBatchMode] = useState(false)
   const [selectedProfiles, setSelectedProfiles] = useState<Set<string>>(
@@ -191,6 +201,22 @@ const ProfilePage = () => {
 
   const viewerRef = useRef<ProfileViewerRef>(null)
   const configRef = useRef<DialogRef>(null)
+
+  const onEditProfile = useLockFn(async (item: IProfileItem) => {
+    if (item.type === 'local' && item.uid) {
+      try {
+        const settings = readAggregateSettings(await readProfileFile(item.uid))
+        if (settings) {
+          setAggregateEditor({ item, settings })
+          return
+        }
+      } catch (error) {
+        showNotice.error('profiles.page.feedback.errors.readFailed', error)
+        return
+      }
+    }
+    viewerRef.current?.edit(item)
+  })
 
   const profileItems = useMemo(() => {
     const items = profiles.items || []
@@ -874,6 +900,14 @@ const ProfilePage = () => {
         >
           {t('shared.actions.new')}
         </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          sx={{ flexShrink: 0 }}
+          onClick={() => setAggregateEditor({})}
+        >
+          {t('profiles.aggregate.action')}
+        </Button>
       </Stack>
 
       <Box
@@ -918,7 +952,9 @@ const ProfilePage = () => {
                 }
                 mutateProfiles={mutateProfiles}
                 onSelect={(f) => onSelect(item.uid!, f)}
-                onEdit={() => viewerRef.current?.edit(item)}
+                onEdit={() => {
+                  void onEditProfile(item)
+                }}
                 onSave={async (prev, curr) => {
                   if (prev !== curr && profiles.current === item.uid) {
                     await onEnhance(false)
@@ -979,6 +1015,15 @@ const ProfilePage = () => {
           }
         }}
       />
+      {aggregateEditor && (
+        <AggregateProfileViewer
+          profiles={profileItems}
+          item={aggregateEditor.item}
+          settings={aggregateEditor.settings}
+          onClose={() => setAggregateEditor(null)}
+          onSaved={mutateProfiles}
+        />
+      )}
       <ConfigViewer ref={configRef} />
     </BasePage>
   )

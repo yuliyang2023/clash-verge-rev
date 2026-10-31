@@ -217,5 +217,22 @@
     "qrViewer": {
       "title": "订阅二维码"
     }
+  },
+  "aggregate": {
+    "action": "聚合订阅",
+    "title": "聚合订阅",
+    "defaultName": "聚合订阅",
+    "description": "将多个订阅的节点与统一规则保存为本地配置，保存后可在订阅列表中启用。内核会分别更新各个订阅的节点。",
+    "sources": "选择订阅",
+    "sourcesHint": "请先导入 Clash 格式的订阅；聚合时忽略订阅自带的规则和策略组。",
+    "missingSource": "订阅已不存在：{{uid}}",
+    "removeMissing": "请取消选择已不存在的订阅后再保存。",
+    "template": "规则模板",
+    "nano": "ShellCrash · 极简规则",
+    "full": "ShellCrash · 全分组规则＋去广告",
+    "custom": "导入／编辑 ShellCrash 模板",
+    "other": "自定义配置（other.yml／others.yaml）",
+    "otherHint": "导入或粘贴 YAML；同名设置覆盖模板，列表整体替换。YAML 锚点需在此文件中定义。",
+    "saveFailed": "保存聚合订阅失败"
   }
 }

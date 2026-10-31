@@ -264,6 +264,23 @@ export interface TranslationResources {
       }
     }
     profiles: {
+      aggregate: {
+        action: string
+        custom: string
+        defaultName: string
+        description: string
+        full: string
+        missingSource: string
+        nano: string
+        other: string
+        otherHint: string
+        removeMissing: string
+        saveFailed: string
+        sources: string
+        sourcesHint: string
+        template: string
+        title: string
+      }
       components: {
         card: {
           labels: {
@@ -1589,6 +1606,7 @@ export interface TranslationResources {
           noDisney: string
           originalsOnly: string
           pending: string
+          risky: string
           unsupportedRegion: string
           yes: string
         }

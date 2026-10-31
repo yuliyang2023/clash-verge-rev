@@ -217,5 +217,22 @@
     "qrViewer": {
       "title": "Subscription QR Code"
     }
+  },
+  "aggregate": {
+    "action": "Aggregate",
+    "title": "Aggregate subscriptions",
+    "defaultName": "Aggregated subscriptions",
+    "description": "Save a local profile combining subscription nodes with shared rules. Enable it from the profile list after saving. The core refreshes each subscription independently.",
+    "sources": "Subscriptions",
+    "sourcesHint": "Import Clash-compatible subscriptions first. Their rules and proxy groups are ignored.",
+    "missingSource": "Unavailable subscription: {{uid}}",
+    "removeMissing": "Remove unavailable subscriptions before saving.",
+    "template": "Rule template",
+    "nano": "ShellCrash · Minimal",
+    "full": "ShellCrash · Full groups + ad blocking",
+    "custom": "Import / edit a ShellCrash template",
+    "other": "Custom configuration (other.yml / others.yaml)",
+    "otherHint": "Import or paste YAML. Matching settings override the template; lists replace existing lists. YAML anchors must be defined in this file.",
+    "saveFailed": "Failed to save the aggregated profile"
   }
 }
