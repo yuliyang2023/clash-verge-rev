@@ -83,7 +83,8 @@
       "extendScript": "Extend Script",
       "openFile": "Open File",
       "update": "Update",
-      "updateViaProxy": "Update via proxy"
+      "updateViaProxy": "Update via proxy",
+      "revealFile": "Show in folder"
     },
     "more": {
       "global": {
@@ -127,7 +128,9 @@
         "acceptInvalidCerts": "Allows Invalid Certificates (Danger)",
         "allowAutoUpdate": "Allow Auto Update",
         "yamlContent": "YAML configuration",
-        "yamlContentHint": "Choose a .yml / .yaml file or paste its contents. Rules, proxy groups and DNS are preserved in this profile."
+        "yamlContentHint": "Choose a .yml / .yaml file or paste its contents. Rules, proxy groups and DNS are preserved in this profile.",
+        "fileName": "YAML filename (optional)",
+        "fileNameHint": "Leave blank for an automatic filename. Unicode names are supported; .yaml is added when omitted. Existing files are never overwritten."
       },
       "types": {
         "remote": "Remote",

@@ -18,7 +18,7 @@ import { BaseDialog, Switch } from '@/components/base'
 import { useProfiles } from '@/hooks/use-profiles'
 import { createProfile, patchProfile } from '@/services/cmds'
 import { mutate } from '@/services/mutate'
-import { showNotice } from '@/services/notice-service'
+import { errorDetail, showNotice } from '@/services/notice-service'
 import { parseProfileYaml } from '@/utils/profile-yaml'
 import { version } from '@root/package.json'
 
@@ -29,7 +29,12 @@ interface Props {
 }
 
 export interface ProfileViewerRef {
-  create: (options?: { type: 'local'; data?: string; name?: string }) => void
+  create: (options?: {
+    type: 'local' | 'remote'
+    data?: string
+    name?: string
+    url?: string
+  }) => void
   edit: (item: IProfileItem) => void
 }
 
@@ -54,6 +59,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         name: '',
         desc: '',
         url: '',
+        file: '',
         option: {
           with_proxy: false,
           self_proxy: false,
@@ -69,6 +75,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
       if (options) {
         setValue('type', options.type)
         setValue('name', options.name ?? '')
+        setValue('url', options.url ?? '')
       }
       setOpenType('new')
       setOpen(true)
@@ -130,6 +137,9 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
           name,
           desc: form.desc,
           option,
+          ...(form.type === 'remote' && openType === 'new' && form.file?.trim()
+            ? { file: form.file.trim() }
+            : {}),
           ...(form.type === 'remote' ? { url: form.url } : {}),
         }
         const isRemote = form.type === 'remote'
@@ -178,7 +188,11 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
                 errorNotice: false,
               })
             }
-          } catch {
+          } catch (error) {
+            const detail = errorDetail(error).toLowerCase()
+            if (detail.includes('legacy tls') || (item.file && detail.includes('filename'))) {
+              throw error
+            }
             showNotice.info(
               'profiles.modals.profileForm.feedback.notifications.creationRetry',
             )
@@ -344,6 +358,23 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
 
       {isRemote && (
         <>
+          {openType === 'new' && (
+            <Controller
+              name="file"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...text}
+                  {...field}
+                  label={t('profiles.modals.profileForm.fields.fileName')}
+                  helperText={t(
+                    'profiles.modals.profileForm.fields.fileNameHint',
+                  )}
+                  placeholder="subscription.yaml"
+                />
+              )}
+            />
+          )}
           <Controller
             name="url"
             control={control}

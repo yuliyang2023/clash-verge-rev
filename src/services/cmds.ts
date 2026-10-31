@@ -55,6 +55,7 @@ export async function createProfile(
       type: item.type,
       name: item.name,
       desc: item.desc,
+      file: item.file,
       ...(item.type === 'remote' ? { url: item.url } : {}),
       option: item.option,
     },
@@ -64,6 +65,10 @@ export async function createProfile(
 
 export async function viewProfile(index: string) {
   return commands.viewProfile(index)
+}
+
+export async function revealProfile(index: string) {
+  return commands.revealProfile(index)
 }
 
 export async function readProfileFile(index: string) {

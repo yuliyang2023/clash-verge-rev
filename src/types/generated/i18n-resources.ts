@@ -300,6 +300,7 @@ export interface TranslationResources {
           extendScript: string
           home: string
           openFile: string
+          revealFile: string
           select: string
           shareQrCode: string
           update: string
@@ -405,6 +406,8 @@ export interface TranslationResources {
             acceptInvalidCerts: string
             allowAutoUpdate: string
             description: string
+            fileName: string
+            fileNameHint: string
             httpTimeout: string
             subscriptionUrl: string
             type: string

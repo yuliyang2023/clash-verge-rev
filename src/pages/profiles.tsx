@@ -46,7 +46,6 @@ import {
   deleteProfile,
   enhanceProfiles,
   getRuntimeLogs,
-  importProfile,
   readProfileFile,
   reorderProfile,
   updateProfile,
@@ -90,14 +89,12 @@ const ProfilePage = () => {
   const { t } = useTranslation()
   const location = useLocation()
   const [url, setUrl] = useState('')
-  const [disabled, setDisabled] = useState(false)
   const [profileDndRevision, setProfileDndRevision] = useState(0)
   const [activatings, setActivatings] = useState<string[]>([])
   const [switchTarget, setSwitchTarget] = useState<string | null>(null)
   const [visibleSwitchingProfile, setVisibleSwitchingProfile] = useState<
     string | null
   >(null)
-  const [loading, setLoading] = useState(false)
   const [aggregateEditor, setAggregateEditor] = useState<{
     item?: IProfileItem
     settings?: AggregateSettings
@@ -231,7 +228,7 @@ const ProfilePage = () => {
     return [...new Set([profiles.current ?? ''])].filter(Boolean)
   }
 
-  const onImport = async () => {
+  const onImport = () => {
     if (!url) return
     if (isProfileYaml(url)) {
       viewerRef.current?.create({ type: 'local', data: url })
@@ -242,56 +239,7 @@ const ProfilePage = () => {
       showNotice.error('profiles.page.feedback.errors.invalidUrl')
       return
     }
-    setLoading(true)
-
-    const prevCurrent = profiles.current
-
-    const handleImportSuccess = async (noticeKey: string) => {
-      showNotice.success(noticeKey)
-      setUrl('')
-      await performRobustRefresh(prevCurrent)
-    }
-    try {
-      await mutate(() => importProfile(url), {
-        id: 'import-profile',
-        errorNotice: false,
-      })
-      await handleImportSuccess('shared.feedback.notifications.importSuccess')
-    } catch (initialErr) {
-      console.warn('[订阅导入] 首次导入失败:', initialErr)
-
-      const initialDetail = errorDetail(initialErr)
-      if (initialDetail.toLowerCase().includes('legacy tls')) {
-        showNotice.error(initialErr)
-        return
-      }
-
-      showNotice.info('profiles.page.feedback.notifications.importRetry')
-      try {
-        await mutate(
-          () =>
-            importProfile(url, {
-              with_proxy: false,
-              self_proxy: true,
-            }),
-          {
-            id: 'import-profile',
-            errorNotice: false,
-          },
-        )
-        await handleImportSuccess(
-          'shared.feedback.notifications.importWithClashProxy',
-        )
-      } catch (retryErr) {
-        showNotice.error(
-          'profiles.page.feedback.notifications.importFail',
-          retryErr,
-        )
-      }
-    } finally {
-      setDisabled(false)
-      setLoading(false)
-    }
+    viewerRef.current?.create({ type: 'remote', url: url.trim() })
   }
 
   // `useProfiles` already retries three times; add only one business-level retry.
@@ -867,7 +815,7 @@ const ProfilePage = () => {
             if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
               return
             }
-            if (!url || disabled || loading) {
+            if (!url) {
               return
             }
             event.preventDefault()
@@ -900,8 +848,7 @@ const ProfilePage = () => {
           }}
         />
         <Button
-          disabled={!url || disabled}
-          loading={loading}
+          disabled={!url}
           variant="contained"
           size="small"
           sx={{ borderRadius: '6px' }}
@@ -1034,7 +981,8 @@ const ProfilePage = () => {
       <ProfileViewer
         ref={viewerRef}
         onChange={async (isActivating) => {
-          mutateProfiles()
+          setUrl('')
+          await performRobustRefresh(profiles.current)
           if (isActivating) {
             await onEnhance(false)
           }

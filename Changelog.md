@@ -25,6 +25,8 @@
 <details>
 <summary><strong> ✨ 新增功能 </strong></summary>
 
+- 新增订阅文件定位入口，支持导入在线订阅时自定义 YAML 文件名
+
 - 新增「聚合订阅」，支持订阅与本地 YAML 节点共用 ShellCrash 规则和自定义配置
 - 新增虚拟网卡设置的「DNS 模式」选项，支持配置 mihomo 系统 DNS 行为
 - 新增「IP 信息」自动刷新开关，关闭后仍可手动刷新

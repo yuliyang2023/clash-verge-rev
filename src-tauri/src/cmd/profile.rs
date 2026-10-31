@@ -341,6 +341,8 @@ pub struct ProfileCreate {
     pub desc: Option<String>,
     #[specta(type = Option<std::string::String>)]
     pub url: Option<String>,
+    #[specta(type = Option<std::string::String>)]
+    pub file: Option<String>,
     pub option: Option<PrfOption>,
 }
 
@@ -351,6 +353,7 @@ impl From<ProfileCreate> for PrfItem {
             name: item.name,
             desc: item.desc,
             url: item.url,
+            file: item.file,
             option: item.option,
             ..Self::default()
         }
@@ -500,6 +503,23 @@ pub async fn view_profile(index: std::string::String) -> CmdResult {
     }
 
     help::open_file(path).with_error_code("PROFILE_OPEN_FAILED")
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn reveal_profile(index: std::string::String) -> CmdResult {
+    let file = Config::profiles()
+        .await
+        .latest_arc()
+        .get_item(&index)
+        .with_error_code("PROFILE_OPEN_FAILED")?
+        .file
+        .clone()
+        .ok_or_else(|| coded_error("PROFILE_OPEN_FAILED", "the file field is null"))?;
+    let path = dirs::app_profiles_dir()
+        .with_error_code("PROFILE_OPEN_FAILED")?
+        .join(file.as_str());
+    tauri_plugin_opener::reveal_item_in_dir(path).with_error_code("PROFILE_OPEN_FAILED")
 }
 
 #[tauri::command]

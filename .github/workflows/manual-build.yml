@@ -16,8 +16,67 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  prepare:
+    name: Generate contract and check profile files
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: '1.99.1'
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: 'manual-contract-macos'
+          workspaces: |
+            . -> target
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6.1.0
+        with:
+          run_install: false
+
+      - name: Install Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '26.13.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare contract build resources
+        run: |
+          mkdir -p src-tauri/sidecar src-tauri/resources dist
+          touch dist/index.html
+          for bin in verge-mihomo verge-mihomo-alpha; do
+            touch "src-tauri/sidecar/${bin}-aarch64-apple-darwin"
+          done
+
+      - name: Generate frontend contract
+        run: pnpm gen:contract
+
+      - name: Check custom profile filenames
+        run: cargo test -p clash-verge --lib custom_profile_filename --locked
+
+      - name: Check frontend types
+        run: pnpm typecheck
+
+      - name: Upload generated contract
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-contract
+          path: src/services/bindings.ts
+          if-no-files-found: error
+          retention-days: 14
+
   build:
     name: Build ${{ matrix.target }}
+    needs: prepare
     strategy:
       fail-fast: false
       matrix:
@@ -38,6 +97,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Download generated contract
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-contract
+          path: src/services
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@master
