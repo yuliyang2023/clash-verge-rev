@@ -73,6 +73,7 @@ pub fn builder() -> tauri_specta::Builder<tauri::Wry> {
             cmd::enhance_profiles,
             cmd::patch_profiles_config,
             cmd::view_profile,
+            cmd::reveal_profile,
             cmd::patch_profile,
             cmd::create_profile,
             cmd::import_profile,

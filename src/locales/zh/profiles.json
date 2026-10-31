@@ -83,7 +83,8 @@
       "extendScript": "扩展脚本",
       "openFile": "打开文件",
       "update": "更新",
-      "updateViaProxy": "更新（代理）"
+      "updateViaProxy": "更新（代理）",
+      "revealFile": "在文件夹中显示"
     },
     "more": {
       "global": {
@@ -127,7 +128,9 @@
         "acceptInvalidCerts": "允许无效证书（危险）",
         "allowAutoUpdate": "允许自动更新",
         "yamlContent": "YAML 配置内容",
-        "yamlContentHint": "选择 .yml／.yaml 文件或直接粘贴内容，原配置中的规则、策略组和 DNS 会保留。"
+        "yamlContentHint": "选择 .yml／.yaml 文件或直接粘贴内容，原配置中的规则、策略组和 DNS 会保留。",
+        "fileName": "YAML 文件名（可选）",
+        "fileNameHint": "留空使用自动文件名；可填写中文名称，省略后缀时补全 .yaml。已有文件不会被覆盖。"
       },
       "types": {
         "remote": "远程",

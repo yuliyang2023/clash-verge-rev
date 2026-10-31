@@ -29,6 +29,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri_plugin_mihomo::models::{Proxies, ProxyType};
+use tokio::io::AsyncWriteExt as _;
 use tokio::{fs, task::JoinHandle};
 
 pub(crate) static PROFILE_WRITE_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -182,10 +183,14 @@ impl IProfiles {
         bail!("failed to get the profile item \"uid:{}\"", uid_str);
     }
 
-    async fn append_item(&mut self, item: &mut PrfItem) -> Result<()> {
+    async fn append_item(&mut self, item: &mut PrfItem, create_new: bool) -> Result<()> {
         let uid = &item.uid;
         if uid.is_none() {
             bail!("the uid should not be null");
+        }
+
+        if create_new && let Some(file) = item.file.as_ref() {
+            self.ensure_profile_file_available(file)?;
         }
 
         if let Some(file_data) = item.file_data.take() {
@@ -199,9 +204,21 @@ impl IProfiles {
                 .ok_or_else(|| anyhow::anyhow!("file field is required when file_data is provided"))?;
             let path = dirs::app_profiles_dir()?.join(file.as_str());
 
-            fs::write(&path, file_data.as_bytes())
-                .await
-                .with_context(|| format!("failed to write to file \"{file}\""))?;
+            if create_new {
+                let mut output = fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&path)
+                    .await
+                    .with_context(|| {
+                        format!("failed to create profile file \"{file}\"; the filename must not already exist")
+                    })?;
+                output.write_all(file_data.as_bytes()).await?;
+            } else {
+                fs::write(&path, file_data.as_bytes())
+                    .await
+                    .with_context(|| format!("failed to write to file \"{file}\""))?;
+            }
         }
 
         if self.current.is_none() && (item.itype == Some("remote".into()) || item.itype == Some("local".into())) {
@@ -216,6 +233,18 @@ impl IProfiles {
             items.push(item.to_owned());
         }
 
+        Ok(())
+    }
+
+    fn ensure_profile_file_available(&self, file: &str) -> Result<()> {
+        if self
+            .items
+            .iter()
+            .flatten()
+            .any(|item| item.file.as_ref().is_some_and(|name| name.eq_ignore_ascii_case(file)))
+        {
+            bail!("a profile already uses the filename \"{file}\"");
+        }
         Ok(())
     }
 
@@ -416,8 +445,50 @@ impl IProfiles {
 use crate::config::Config;
 
 pub(crate) async fn profiles_append_item_with_filedata_safe(item: &PrfItem, file_data: Option<String>) -> Result<()> {
+    let custom_file = item.file.as_deref().map(normalize_custom_profile_file).transpose()?;
+    if let Some(file) = custom_file.as_ref() {
+        Config::profiles()
+            .await
+            .latest_arc()
+            .ensure_profile_file_available(file)?;
+        if fs::try_exists(dirs::app_profiles_dir()?.join(file.as_str())).await? {
+            bail!("the profile filename \"{file}\" already exists");
+        }
+    }
     let item = &mut PrfItem::from(item, file_data).await?;
+    if let Some(file) = custom_file {
+        item.file = Some(file);
+        return Config::profiles()
+            .await
+            .with_data_modify(|mut profiles| async move {
+                profiles.append_item(item, true).await?;
+                Ok((profiles, ()))
+            })
+            .await;
+    }
     profiles_append_item_safe(item).await
+}
+
+fn normalize_custom_profile_file(file: &str) -> Result<String> {
+    let file = file.trim();
+    IProfiles::validate_profile_file(file)?;
+    if file.chars().any(|ch| ch.is_control() || "<>:\"|?*".contains(ch)) || file.ends_with('.') {
+        bail!("invalid profile filename \"{file}\"");
+    }
+    let stem = file.split('.').next().unwrap_or_default().to_ascii_uppercase();
+    if ["CON", "PRN", "AUX", "NUL"].contains(&stem.as_str())
+        || ((stem.starts_with("COM") || stem.starts_with("LPT"))
+            && stem.len() == 4
+            && (b'1'..=b'9').contains(&stem.as_bytes()[3]))
+    {
+        bail!("reserved profile filename \"{file}\"");
+    }
+    let lowercase = file.to_ascii_lowercase();
+    Ok(if lowercase.ends_with(".yaml") || lowercase.ends_with(".yml") {
+        file.into()
+    } else {
+        format!("{file}.yaml").into()
+    })
 }
 
 pub(crate) async fn profiles_append_item_safe(item: &mut PrfItem) -> Result<()> {
@@ -428,7 +499,7 @@ pub(crate) async fn profiles_append_item_safe(item: &mut PrfItem) -> Result<()> 
 pub(super) async fn profiles_append_item_to_safe(profiles: &Draft<IProfiles>, item: &mut PrfItem) -> Result<()> {
     profiles
         .with_data_modify(|mut profiles| async move {
-            profiles.append_item(item).await?;
+            profiles.append_item(item, false).await?;
             Ok((profiles, ()))
         })
         .await
@@ -1070,6 +1141,47 @@ fn activate_selected_nodes_with(repair: SelectionRepair) -> tokio::sync::oneshot
 mod tests {
     use super::*;
     use tauri_plugin_mihomo::models::Proxy;
+
+    #[test]
+    fn custom_profile_filenames_are_portable_yaml_filenames() -> Result<()> {
+        assert_eq!(normalize_custom_profile_file("机场订阅")?, "机场订阅.yaml");
+        assert_eq!(normalize_custom_profile_file("work.yml")?, "work.yml");
+        for invalid in [
+            "",
+            "../outside.yaml",
+            "folder/file.yaml",
+            "folder\\file.yaml",
+            "bad:name",
+            "NUL.yml",
+            "COM1",
+            "bad?name",
+            "trailing.",
+        ] {
+            assert!(normalize_custom_profile_file(invalid).is_err(), "{invalid}");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn custom_profile_filename_rejects_an_existing_profile_before_writing() {
+        let mut profiles = IProfiles {
+            items: Some(vec![PrfItem {
+                uid: Some("existing".into()),
+                file: Some("Work.yaml".into()),
+                ..PrfItem::default()
+            }]),
+            ..IProfiles::default()
+        };
+        let mut incoming = PrfItem {
+            uid: Some("incoming".into()),
+            file: Some("work.yaml".into()),
+            file_data: Some("proxies: []".into()),
+            ..PrfItem::default()
+        };
+        assert!(profiles.append_item(&mut incoming, true).await.is_err());
+        assert_eq!(profiles.items.as_ref().map(Vec::len), Some(1));
+        assert_eq!(incoming.file_data.as_deref(), Some("proxies: []"));
+    }
 
     fn deletion_item(uid: &str, kind: &str, file: &str, merge: Option<&str>) -> PrfItem {
         PrfItem {
