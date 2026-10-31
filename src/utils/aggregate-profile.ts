@@ -129,6 +129,25 @@ export function buildAggregateProfile(
     }
   })
 
+  const reservedNames = new Set([
+    'DIRECT',
+    'REJECT',
+    'REJECT-DROP',
+    'PASS',
+    'COMPATIBLE',
+    'GLOBAL',
+    ...groupNames,
+    ...template['proxy-groups'].map((group: YamlMapping) => group.name),
+  ])
+  const aliases = selected.flatMap((source, index) => {
+    if (
+      reservedNames.has(source.name) ||
+      selected.filter((item) => item.name === source.name).length !== 1
+    )
+      return []
+    return [{ name: source.name, type: 'select', proxies: [groupNames[index]] }]
+  })
+
   const config = mergeMapping(
     {
       ...template,
@@ -136,7 +155,7 @@ export function buildAggregateProfile(
         ...(template['proxy-providers'] as YamlMapping),
         ...providers,
       },
-      'proxy-groups': [...template['proxy-groups'], ...groups],
+      'proxy-groups': [...template['proxy-groups'], ...aliases, ...groups],
     },
     parseMapping(settings.other),
   )
