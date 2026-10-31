@@ -56,7 +56,10 @@ export const AggregateProfileViewer = ({
   )
   const [saving, setSaving] = useState(false)
   const sources = profiles.filter(
-    (profile) => profile.type === 'remote' && profile.url,
+    (profile) =>
+      profile.uid !== item?.uid &&
+      ((profile.type === 'remote' && profile.url) ||
+        (profile.type === 'local' && profile.file)),
   )
   const missing = value.sources.filter(
     (uid) => !sources.some((source) => source.uid === uid),
@@ -70,9 +73,13 @@ export const AggregateProfileViewer = ({
         sources.map((source) => ({
           uid: source.uid!,
           name: source.name || source.uid!,
-          url: source.url!,
-          userAgent: source.option?.user_agent ?? undefined,
-          intervalMinutes: source.option?.update_interval ?? undefined,
+          ...(source.type === 'remote'
+            ? {
+                url: source.url!,
+                userAgent: source.option?.user_agent ?? undefined,
+                intervalMinutes: source.option?.update_interval ?? undefined,
+              }
+            : { file: source.file! }),
         })),
       )
       if (item?.uid) {

@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { useLockFn } from 'ahooks'
 import type { Ref } from 'react'
-import { useEffect, useImperativeHandle, useRef, useState } from 'react'
+import { useEffect, useImperativeHandle, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
@@ -19,6 +19,7 @@ import { useProfiles } from '@/hooks/use-profiles'
 import { createProfile, patchProfile } from '@/services/cmds'
 import { mutate } from '@/services/mutate'
 import { showNotice } from '@/services/notice-service'
+import { parseProfileYaml } from '@/utils/profile-yaml'
 import { version } from '@root/package.json'
 
 import { FileInput } from './file-input'
@@ -28,7 +29,7 @@ interface Props {
 }
 
 export interface ProfileViewerRef {
-  create: () => void
+  create: (options?: { type: 'local'; data?: string; name?: string }) => void
   edit: (item: IProfileItem) => void
 }
 
@@ -44,7 +45,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
   const [loading, setLoading] = useState(false)
   const { profiles } = useProfiles()
 
-  const fileDataRef = useRef<string | null>(null)
+  const [fileData, setFileData] = useState<string | null>(null)
 
   const { control, watch, setValue, reset, handleSubmit, getValues } =
     useForm<IProfileItem>({
@@ -62,7 +63,13 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
     })
 
   useImperativeHandle(ref, () => ({
-    create: () => {
+    create: (options) => {
+      reset()
+      setFileData(options?.data ?? null)
+      if (options) {
+        setValue('type', options.type)
+        setValue('name', options.name ?? '')
+      }
       setOpenType('new')
       setOpen(true)
     },
@@ -97,6 +104,9 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         }
         if (form.type === 'remote' && !form.url) {
           throw new Error(t('profiles.modals.profileForm.errors.urlRequired'))
+        }
+        if (form.type === 'local' && openType === 'new' && fileData !== null) {
+          parseProfileYaml(fileData)
         }
 
         const option = form.option ? { ...form.option } : undefined
@@ -135,7 +145,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
 
         if (!isRemote) {
           if (openType === 'new') {
-            await mutate(() => createProfile(item, fileDataRef.current), {
+            await mutate(() => createProfile(item, fileData), {
               id: 'create-profile',
               errorNotice: false,
             })
@@ -153,7 +163,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
         } else {
           try {
             if (openType === 'new') {
-              await mutate(() => createProfile(item, fileDataRef.current), {
+              await mutate(() => createProfile(item, fileData), {
                 id: 'create-profile',
                 errorNotice: false,
               })
@@ -183,13 +193,10 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
             }
 
             if (openType === 'new') {
-              await mutate(
-                () => createProfile(retryItem, fileDataRef.current),
-                {
-                  id: 'create-profile',
-                  errorNotice: false,
-                },
-              )
+              await mutate(() => createProfile(retryItem, fileData), {
+                id: 'create-profile',
+                errorNotice: false,
+              })
             } else {
               if (!form.uid) {
                 throw new Error(
@@ -218,7 +225,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
 
         setOpen(false)
         setTimeout(() => reset(), 500)
-        fileDataRef.current = null
+        setFileData(null)
 
         setTimeout(() => {
           onChange(isActivating)
@@ -234,7 +241,7 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
   const handleClose = () => {
     try {
       setOpen(false)
-      fileDataRef.current = null
+      setFileData(null)
       setTimeout(() => reset(), 500)
     } catch (e) {
       console.warn('[ProfileViewer] handleClose error:', e)
@@ -315,12 +322,24 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
       />
 
       {isLocal && openType === 'new' && (
-        <FileInput
-          onChange={(file, val) => {
-            setValue('name', getValues('name') || file.name)
-            fileDataRef.current = val
-          }}
-        />
+        <>
+          <FileInput
+            onChange={(file, val) => {
+              setValue('name', getValues('name') || file.name)
+              setFileData(val)
+            }}
+          />
+          <TextField
+            {...text}
+            multiline
+            minRows={6}
+            maxRows={12}
+            label={t('profiles.modals.profileForm.fields.yamlContent')}
+            helperText={t('profiles.modals.profileForm.fields.yamlContentHint')}
+            value={fileData ?? ''}
+            onChange={(event) => setFileData(event.target.value)}
+          />
+        </>
       )}
 
       {isRemote && (

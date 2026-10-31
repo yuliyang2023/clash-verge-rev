@@ -66,6 +66,7 @@ import {
 } from '@/utils/aggregate-profile'
 import { debugLog } from '@/utils/debug'
 import { isValidUrl } from '@/utils/network'
+import { isProfileYaml } from '@/utils/profile-yaml'
 
 // 与 src-tauri/src/main.rs 的 worker_limit 上限(8)保持一致，避免前后端更新风暴不对齐
 const PROFILE_UPDATE_WORKER_LIMIT = 8
@@ -232,6 +233,11 @@ const ProfilePage = () => {
 
   const onImport = async () => {
     if (!url) return
+    if (isProfileYaml(url)) {
+      viewerRef.current?.create({ type: 'local', data: url })
+      setUrl('')
+      return
+    }
     if (!isValidUrl(url)) {
       showNotice.error('profiles.page.feedback.errors.invalidUrl')
       return
@@ -615,7 +621,11 @@ const ProfilePage = () => {
 
   const onCopyLink = async () => {
     const text = await readText()
-    if (text) setUrl(text)
+    if (text && isProfileYaml(text)) {
+      viewerRef.current?.create({ type: 'local', data: text })
+    } else if (text) {
+      setUrl(text)
+    }
   }
 
   const toggleBatchMode = () => {
@@ -846,6 +856,13 @@ const ProfilePage = () => {
           value={url}
           variant="outlined"
           onChange={(e) => setUrl(e.target.value)}
+          onPaste={(event) => {
+            const text = event.clipboardData.getData('text')
+            if (isProfileYaml(text)) {
+              event.preventDefault()
+              viewerRef.current?.create({ type: 'local', data: text })
+            }
+          }}
           onKeyDown={(event) => {
             if (event.key !== 'Enter' || event.nativeEvent.isComposing) {
               return
@@ -891,6 +908,14 @@ const ProfilePage = () => {
           onClick={onImport}
         >
           {t('profiles.page.actions.import')}
+        </Button>
+        <Button
+          variant="outlined"
+          size="small"
+          sx={{ flexShrink: 0 }}
+          onClick={() => viewerRef.current?.create({ type: 'local' })}
+        >
+          {t('profiles.page.actions.importYaml')}
         </Button>
         <Button
           variant="contained"

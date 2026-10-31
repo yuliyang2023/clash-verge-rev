@@ -412,6 +412,8 @@ export interface TranslationResources {
             useClashProxy: string
             userAgent: string
             useSystemProxy: string
+            yamlContent: string
+            yamlContentHint: string
           }
           title: {
             create: string
@@ -442,6 +444,7 @@ export interface TranslationResources {
       page: {
         actions: {
           import: string
+          importYaml: string
           reactivate: string
           updateAll: string
           viewRuntimeConfig: string

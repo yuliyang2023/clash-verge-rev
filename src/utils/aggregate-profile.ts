@@ -18,13 +18,16 @@ export interface AggregateSettings {
   other: string
 }
 
-export interface AggregateSource {
+interface AggregateSourceBase {
   uid: string
   name: string
-  url: string
-  userAgent?: string
-  intervalMinutes?: number
 }
+
+export type AggregateSource = AggregateSourceBase &
+  (
+    | { url: string; userAgent?: string; intervalMinutes?: number }
+    | { file: string }
+  )
 
 type YamlMapping = Record<string, unknown>
 
@@ -100,10 +103,14 @@ export function buildAggregateProfile(
   const groups = selected.map((source, index) => {
     const providerName = `subscription-${source.uid}`
     providers[providerName] = {
-      type: 'http',
-      url: source.url,
-      interval: Math.max(source.intervalMinutes || 1440, 1) * 60,
-      header: { 'User-Agent': [source.userAgent || 'clash.meta'] },
+      ...('url' in source
+        ? {
+            type: 'http',
+            url: source.url,
+            interval: Math.max(source.intervalMinutes || 1440, 1) * 60,
+            header: { 'User-Agent': [source.userAgent || 'clash.meta'] },
+          }
+        : { type: 'file', path: `./profiles/${source.file}` }),
       'health-check': {
         enable: true,
         lazy: true,
