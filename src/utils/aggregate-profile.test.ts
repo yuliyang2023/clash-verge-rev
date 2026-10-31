@@ -164,4 +164,40 @@ dns:
     expect(() => parseProfileYaml('- not a configuration')).toThrow()
     expect(() => parseProfileYaml('rules: ["MATCH,DIRECT"]')).toThrow()
   })
+
+  test('custom rules can reference an unambiguous source name without its profile ID', () => {
+    const config = load(
+      buildAggregateProfile(
+        {
+          ...settings,
+          sources: ['L1'],
+          other:
+            'rules: ["DOMAIN-SUFFIX,example.internal,office", "MATCH,DIRECT"]',
+        },
+        [{ uid: 'L1', name: 'office', file: 'L1.yaml' }],
+      ),
+    ) as Record<string, any>
+    expect(config['proxy-groups']).toContainEqual({
+      name: 'office',
+      type: 'select',
+      proxies: ['office [L1]'],
+    })
+    expect(config['proxy-groups']).toContainEqual(
+      expect.objectContaining({
+        name: 'office [L1]',
+        use: ['subscription-L1'],
+      }),
+    )
+    expect(config.rules[0]).toBe('DOMAIN-SUFFIX,example.internal,office')
+
+    const collisions = load(buildAggregateProfile(settings, sources)) as Record<
+      string,
+      any
+    >
+    expect(
+      collisions['proxy-groups'].some(
+        (group: { name: string }) => group.name === sources[0].name,
+      ),
+    ).toBe(false)
+  })
 })
