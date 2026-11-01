@@ -144,6 +144,8 @@ export const commands = {
     __TAURI_INVOKE<ValidationOutcome>('patch_profiles_config', { profiles }),
   viewProfile: (index: string) =>
     __TAURI_INVOKE<null>('view_profile', { index }),
+  revealProfile: (index: string) =>
+    __TAURI_INVOKE<null>('reveal_profile', { index }),
   patchProfile: (index: string, profile: ProfilePatch_Deserialize) =>
     __TAURI_INVOKE<null>('patch_profile', { index, profile }),
   createProfile: (item: ProfileCreate_Deserialize, fileData: string | null) =>
@@ -734,6 +736,7 @@ export type ProfileCreate_Deserialize = {
   name?: string | null
   desc?: string | null
   url?: string | null
+  file?: string | null
   option?: PrfOption_Deserialize | null
 }
 
@@ -742,6 +745,7 @@ export type ProfileCreate_Serialize = {
   name: string | null
   desc: string | null
   url: string | null
+  file: string | null
   option: PrfOption_Serialize | null
 }
 
