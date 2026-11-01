@@ -131,7 +131,8 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
           option.user_agent = undefined
         }
 
-        const name = form.name || `${form.type} file`
+        const name =
+          form.name || (form.type === 'remote' ? undefined : 'local file')
         const item = {
           type: form.type,
           name,
@@ -190,7 +191,10 @@ export function ProfileViewer({ onChange, ref }: ProfileViewerProps) {
             }
           } catch (error) {
             const detail = errorDetail(error).toLowerCase()
-            if (detail.includes('legacy tls') || (item.file && detail.includes('filename'))) {
+            if (
+              detail.includes('legacy tls') ||
+              (item.file && detail.includes('filename'))
+            ) {
               throw error
             }
             showNotice.info(
