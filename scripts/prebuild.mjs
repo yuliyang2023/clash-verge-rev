@@ -729,7 +729,75 @@ const resolveUnSetDnsScript = () =>
     localPath: path.join(cwd, 'scripts/unset_dns.sh'),
   })
 
+const GLIDER_CHECKSUMS = {
+  'darwin-amd64':
+    '8bcf5bd976cf7a6e5f05bfdbbc98747cc40eb38174466c729c7f66e7166cb22d',
+  'darwin-arm64':
+    '419b478bf324ea57fd16b039dafd2e38e4198be8ffbbcfd61a1f69bec5ec7d75',
+  'linux-386':
+    'ee40d37625054febe20e9701fe53eb3ee0ecbc2bfc84ecfa3880ec83888393e3',
+  'linux-amd64':
+    '2b0f42d581b21545e27d5641caeb18896795620f25217f1b5d9fe2f02c685ea4',
+  'linux-arm64':
+    '131af46690f56ef62c9b682f26fd4841ed4c1d2c53251b850ff1d513a8809e3b',
+  'linux-armv7':
+    '3f96e199aade898b42f86e2e6f7b2b46bef6e6d630850c6c6a3d337673379d25',
+  'linux-riscv64':
+    'ecceb50b7b7568c1700fd0794117bfcdc4d7324b12ddadc0df5f675442f53f40',
+  'windows-386':
+    '90183c86b6b41f1316836b59bee6e21f96d56d2e37ed896046622674fe7c381b',
+  'windows-amd64':
+    'e0c9687f06c8632902f6bd8e57e20fde28b8b047df602edeaa361c3e9f147cdd',
+  'windows-arm64':
+    '052be5247efb3729dba5e646d9efffbd4cce1d3ebb956179e721f8c9e1d93ac2',
+}
+
+async function resolveGlider() {
+  const os = { win32: 'windows', darwin: 'darwin', linux: 'linux' }[platform]
+  const cpu = {
+    x64: 'amd64',
+    ia32: '386',
+    arm64: 'arm64',
+    arm: 'armv7',
+    riscv64: 'riscv64',
+  }[arch]
+  const checksum = GLIDER_CHECKSUMS[`${os}-${cpu}`]
+  const binary = platform === 'win32' ? 'glider.exe' : 'glider'
+  const destination = path.join(RESOURCES_DIR, binary)
+  await fsp.rm(path.join(RESOURCES_DIR, 'glider'), { force: true })
+  await fsp.rm(path.join(RESOURCES_DIR, 'glider.exe'), { force: true })
+  if (!checksum) {
+    log_info(`Glider is unavailable for ${platform}-${arch}`)
+    return
+  }
+  const name = `glider_0.16.4_${os}_${cpu}`
+  const archive = `${name}.${platform === 'win32' ? 'zip' : 'tar.gz'}`
+  const tempDir = path.join(TEMP_DIR, 'glider')
+  await fsp.mkdir(tempDir, { recursive: true })
+  try {
+    const archivePath = path.join(tempDir, archive)
+    await downloadFile(
+      `https://github.com/nadoo/glider/releases/download/v0.16.4/${archive}`,
+      archivePath,
+    )
+    if ((await calculateFileHash(archivePath)) !== checksum)
+      throw new Error('Glider checksum mismatch')
+    if (platform === 'win32')
+      new AdmZip(archivePath).extractAllTo(tempDir, true)
+    else await extract({ cwd: tempDir, file: archivePath })
+    const matches = await glob(`**/${binary}`, { cwd: tempDir, nodir: true })
+    if (matches.length !== 1)
+      throw new Error('Glider binary not found in archive')
+    await fsp.mkdir(RESOURCES_DIR, { recursive: true })
+    await fsp.copyFile(path.join(tempDir, matches[0]), destination)
+    if (platform !== 'win32') await fsp.chmod(destination, 0o755)
+  } finally {
+    await fsp.rm(tempDir, { recursive: true, force: true })
+  }
+}
+
 const tasks = [
+  { name: 'glider', func: resolveGlider, retry: 5 },
   {
     name: 'verge-mihomo-alpha',
     func: () =>

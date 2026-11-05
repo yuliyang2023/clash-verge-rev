@@ -9,6 +9,16 @@
     "title": "Settings"
   },
   "sections": {
+    "glider": {
+      "title": "SOCKS5 forwarding (glider)",
+      "listenPort": "Local listening port",
+      "targetIp": "Target IP address",
+      "targetPort": "Target port",
+      "listenWarning": "Listens on all network interfaces without authentication.",
+      "start": "Start",
+      "stop": "Stop",
+      "invalidPort": "Enter ports between 1 and 65535."
+    },
     "system": {
       "title": "System Setting",
       "toggles": {

@@ -385,6 +385,7 @@ pub fn run() -> std::process::ExitCode {
             });
         }
         tauri::RunEvent::Exit => {
+            let _ = cmd::stop_glider();
             // Windows session ending currently reaches Tao as WM_ENDSESSION and
             // destroys the loop without a preventable ExitRequested event.
             if !handle::Handle::global().is_exiting() {

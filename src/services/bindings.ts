@@ -8,6 +8,10 @@ export const commands = {
   /**  获取应用的运行时间（毫秒） */
   getAppUptime: () => __TAURI_INVOKE<number>('get_app_uptime'),
   exportDiagnosticInfo: () => __TAURI_INVOKE<null>('export_diagnostic_info'),
+  gliderStatus: () => __TAURI_INVOKE<boolean>('glider_status'),
+  startGlider: (listenPort: number, targetIp: string, targetPort: number) =>
+    __TAURI_INVOKE<null>('start_glider', { listenPort, targetIp, targetPort }),
+  stopGlider: () => __TAURI_INVOKE<null>('stop_glider'),
   probeListener: (request: ListenerProbe) =>
     __TAURI_INVOKE<ListenerProbeOutcome>('probe_listener', { request }),
   saveProxyPorts: (settings: ProxyPortSettings) =>

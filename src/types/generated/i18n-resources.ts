@@ -1378,6 +1378,16 @@ export interface TranslationResources {
             open: string
           }
         }
+        glider: {
+          invalidPort: string
+          listenPort: string
+          listenWarning: string
+          start: string
+          stop: string
+          targetIp: string
+          targetPort: string
+          title: string
+        }
         proxyControl: {
           actions: {
             installService: string

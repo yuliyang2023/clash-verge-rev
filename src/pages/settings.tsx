@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { BasePage } from '@/components/base'
 import SettingClash from '@/components/setting/setting-clash'
+import SettingGlider from '@/components/setting/setting-glider'
 import SettingSystem from '@/components/setting/setting-system'
 import SettingVergeAdvanced from '@/components/setting/setting-verge-advanced'
 import SettingVergeBasic from '@/components/setting/setting-verge-basic'
@@ -111,6 +112,15 @@ const SettingPage = () => {
             }}
           >
             <SettingVergeAdvanced onError={onError} />
+          </Box>
+          <Box
+            sx={{
+              borderRadius: 2,
+              marginTop: 1.5,
+              backgroundColor: isDark ? '#282a36' : '#ffffff',
+            }}
+          >
+            <SettingGlider />
           </Box>
         </Grid>
       </Grid>

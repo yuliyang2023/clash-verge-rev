@@ -9,6 +9,16 @@
     "title": "设置"
   },
   "sections": {
+    "glider": {
+      "title": "SOCKS5 转发（glider）",
+      "listenPort": "本地监听端口",
+      "targetIp": "目标 IP 地址",
+      "targetPort": "目标端口",
+      "listenWarning": "监听所有网络接口，且不需要身份验证。",
+      "start": "启动",
+      "stop": "停止",
+      "invalidPort": "请输入 1 到 65535 之间的端口。"
+    },
     "system": {
       "title": "系统设置",
       "toggles": {

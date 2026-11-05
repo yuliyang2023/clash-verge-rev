@@ -30,6 +30,14 @@ export type {
   UnlockItem,
 } from './bindings'
 
+export const getGliderStatus = () => commands.gliderStatus()
+export const startGlider = (
+  listenPort: number,
+  targetIp: string,
+  targetPort: number,
+) => commands.startGlider(listenPort, targetIp, targetPort)
+export const stopGlider = () => commands.stopGlider()
+
 export async function copyClashEnv() {
   return commands.copyClashEnv()
 }
